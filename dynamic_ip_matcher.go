@@ -2,6 +2,7 @@ package dynamic_ip_matcher
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/netip"
@@ -11,7 +12,6 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"go.uber.org/zap"
 )
 
 func init() {
@@ -26,7 +26,7 @@ type MatchDynamicRemoteIP struct {
 	ProvidersRaw json.RawMessage         `json:"providers,omitempty" caddy:"namespace=http.ip_sources inline_key=source"`
 	Providers    caddyhttp.IPRangeSource `json:"-"`
 
-	logger *zap.Logger
+	logger *slog.Logger
 }
 
 func (MatchDynamicRemoteIP) CaddyModule() caddy.ModuleInfo {
@@ -69,7 +69,7 @@ func (m *MatchDynamicRemoteIP) UnmarshalCaddyfile(d *caddyfile.Dispenser) error 
 }
 
 func (m *MatchDynamicRemoteIP) Provision(ctx caddy.Context) error {
-	m.logger = ctx.Logger()
+	m.logger = ctx.Slogger()
 
 	if m.ProvidersRaw != nil {
 		val, err := ctx.LoadModule(m, "ProvidersRaw")
@@ -89,7 +89,7 @@ func (m MatchDynamicRemoteIP) MatchWithError(r *http.Request) (bool, error) {
 	remoteIP, err := parseIPFromString(address)
 
 	if err != nil {
-		m.logger.Error("getting remote IP", zap.Error(err))
+		m.logger.Error("getting remote IP", slog.Any("error", err))
 		return false, err
 	}
 
